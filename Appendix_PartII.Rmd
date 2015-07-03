@@ -1,0 +1,100 @@
+---
+title: 'Appendix Part II: Codes and Test Results'
+author: "Tamer Köksal"
+date: "February 15, 2015"
+output: pdf_document
+---
+
+## 1.Introduction
+
+### Code for Fig.1
+
+```{r, fig.height=4, fig.keep='none'}
+yoj = median(ToothGrowth$len[ToothGrowth$supp=="OJ"])
+yvc = median(ToothGrowth$len[ToothGrowth$supp=="VC"])
+par(mfrow = c(1,2))
+boxplot(len ~ supp, data= ToothGrowth, ylab= "Tooth length", 
+        xlab= "Supplement type")
+     text(x = c(1,2), y= c(yoj+1.5, yvc+1.5), labels = c(
+         paste("median=", format(yoj, nsmall = 2), sep=""),
+         paste("median=", format(yvc, nsmall = 2), sep="")),
+          col = "blue", cex= .8)
+y05 = median(ToothGrowth$len[ToothGrowth$dose==.5])
+y1 = median(ToothGrowth$len[ToothGrowth$dose==1])
+y2 = median(ToothGrowth$len[ToothGrowth$dose==2])
+boxplot(len ~ dose, data= ToothGrowth, xlab= "Dose in milligrams")
+    text(x = c(1,2, 3), y= c(y05+1.5, y1+1.5, y2+1.5), labels = c(
+         paste("med=", format(y05, nsmall = 2), sep=""),
+         paste("med=", format(y1, nsmall = 2), sep=""),
+         paste("med=", format(y2, nsmall = 2), sep="")),
+          col = "blue", cex= .8)
+title(outer = TRUE, main= "\n\n\n\n\n\nFig.1: Tooth Growth by Supplement type 
+      and Dose level", cex.main= .9, cex.axis=.7)
+```
+
+## 2. Hypothesis Test: Compare Tooth Growth by Supplement Type 
+
+### Code for Fig.2
+
+```{r, fig.height=3, fig.keep='none'}
+library(ggplot2)
+tg <- ggplot(data= ToothGrowth, aes(x= supp, y= len)) + geom_point()
+tg <- tg + facet_grid(. ~ dose)
+tg + geom_boxplot(aes(group= supp), color= "red") +
+    labs(title= "Fig.2: Tooth Growth by Supplement Type",
+         x = "Supplement type", y= "Tooth length") + 
+    theme(title = element_text(size=rel(.8)))
+```
+
+### 2.2 Second panel of Fig.2 (Is there a significant difference between the group on OJ and the group on VC in terms of tooth length at the dose level of $1$): Code for and results of the corresponding t.test
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+lenoj1 <- filter(ToothGrowth, supp=="OJ" & dose==1)$len # a 10-value vector of tooth length
+lenvc1 <- filter(ToothGrowth, supp=="VC" & dose==1)$len # a 10-value vector of tooth length
+t.test(x = lenoj1, y = lenvc1, var.equal = TRUE)
+```
+
+### 2.3 Third panel of Fig.2 (Is there a significant difference between the group on OJ and the group on VC in terms of tooth length at the dose level of $2$): Code for and results of the corresponding t.test
+
+```{r, warning=FALSE, message=FALSE}
+lenoj2 <- filter(ToothGrowth, supp=="OJ" & dose==2)$len # a 10-value vector of tooth length
+lenvc2 <- filter(ToothGrowth, supp=="VC" & dose==2)$len # a 10-value vector of tooth length
+t.test(x = lenoj2, y = lenvc2, var.equal = TRUE)
+```
+
+## 3. Hypothesis Test: Compare Tooth Growth by Dose Level
+
+### Code for Fig.3
+
+```{r, fig.height=3, fig.width=5, fig.keep='none'}
+library(ggplot2)
+tg <- ggplot(data= ToothGrowth, aes(x= dose, y= len)) + geom_point() +
+    scale_x_continuous(breaks = ToothGrowth$dose)
+tg <- tg + facet_grid(. ~ supp)
+tg + geom_boxplot(aes(group= dose), color= "red") +
+    labs(title= "Fig.3: Tooth Growth by Dose Level",
+         x = "Dose in milligrams", y= "Tooth length") + 
+    theme(title = element_text(size=rel(.8)))
+```
+
+### 3.1 First panel of Fig.3 (Is there a significant difference between the group on $0.5$ `mg.` of OJ and the group on $2$ `mgs.` of OJ in terms of tooth length): Code for and results of the corresponding t.test
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+lenoj05 <- filter(ToothGrowth, supp=="OJ" & dose==.5)$len # a 10-value vector of tooth length
+lenoj2 <- filter(ToothGrowth, supp=="OJ" & dose==2)$len # a 10-value vector of tooth length
+
+t.test(lenoj2, lenoj05, var.equal = TRUE)
+```
+
+### 3.2 Second panel of Fig.3 (Is there a significant difference between the group on $0.5$ `mg.` of VC and the group on $2$ `mgs.` of VC in terms of tooth length): Code for and results of the corresponding t.test
+
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+lenvc05 <- filter(ToothGrowth, supp=="VC" & dose==.5)$len # a 10-value vector of tooth length
+lenvc2 <- filter(ToothGrowth, supp=="VC" & dose==2)$len # a 10-value vector of tooth length
+
+t.test(lenvc2, lenvc05, var.equal = TRUE)
+```

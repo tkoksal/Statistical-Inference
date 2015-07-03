@@ -1,0 +1,133 @@
+---
+title: "Tooth Growth by Supplement Type and Dose Level"
+author: "Tamer Köksal"
+date: "February 13, 2015"
+output: pdf_document
+---
+## 1.Introduction
+
+According to the description of `ToothGrowth` dataset titled **"The Effect of Vitamin C on Tooth Growth in Guinea Pigs"**, 60 guinea pigs were given two different supplements: orange juice (OJ) or ascorbic acid (VC) at three different dose levels: 0.5, 1, or 2 mg, respectively. Thus, there are six groups, each of 10 guinea pigs, which were exposed to different combination of supplement type and dose level.
+
+```{r}
+str(ToothGrowth)
+```
+
+The dataset consists of three variables `len` (tooth length), `supp` (supplement type), and `dose` (dose level). To explore the effect of supplement type OJ vs. VC, and dose level on tooth growth in guinea pigs, I plotted the below boxplots (Fig.1). On the left plot, guinea pigs on OJ seem to have a greater median tooth length compared to those on VC. The right plot on the other hand suggests that the higher the dose level, the higher the tooth length. Although these effects are visually apparent from the plots, we need to show that these effects are statistically significant. 
+
+```{r, fig.height=4, echo=FALSE}
+yoj = median(ToothGrowth$len[ToothGrowth$supp=="OJ"])
+yvc = median(ToothGrowth$len[ToothGrowth$supp=="VC"])
+par(mfrow = c(1,2))
+boxplot(len ~ supp, data= ToothGrowth, ylab= "Tooth length", 
+        xlab= "Supplement type")
+     text(x = c(1,2), y= c(yoj+1.5, yvc+1.5), labels = c(
+         paste("median=", format(yoj, nsmall = 2), sep=""),
+         paste("median=", format(yvc, nsmall = 2), sep="")),
+          col = "blue", cex= .8)
+y05 = median(ToothGrowth$len[ToothGrowth$dose==.5])
+y1 = median(ToothGrowth$len[ToothGrowth$dose==1])
+y2 = median(ToothGrowth$len[ToothGrowth$dose==2])
+boxplot(len ~ dose, data= ToothGrowth, xlab= "Dose in milligrams")
+    text(x = c(1,2, 3), y= c(y05+1.5, y1+1.5, y2+1.5), labels = c(
+         paste("med=", format(y05, nsmall = 2), sep=""),
+         paste("med=", format(y1, nsmall = 2), sep=""),
+         paste("med=", format(y2, nsmall = 2), sep="")),
+          col = "blue", cex= .8)
+title(outer = TRUE, main= "\n\n\n\n\n\nFig.1: Tooth Growth by Supplement type and Dose level", cex.main= .9, cex.axis=.7)
+```
+
+*Multivariate ordinary least squares (OLS) regression* would be the proper statistical method in testing the effect of supplement type and dose level on tooth growth, however for the purpose of this assignment I will employ `t.test` to compare means of tooth length grouped by supplement type and dose level, respectively. In Fig.1, the left plot depicting the relationship of tooth growth by supplement type does not differentiate between (control for) the three dose levels. Similarly, the right plot does not control for the supplement type. This is problematic, and needs to be addressed.
+
+## 2. Hypothesis Test: Compare Tooth Growth by Supplement Type 
+
+In testing the effect of supplement type on tooth growth, we need to control for the dose level. That is, we need to explore the relationship between supplement type and tooth growth at each dose level separately, which is visualized in Fig.2.
+
+```{r, echo=FALSE, fig.height=3}
+library(ggplot2)
+tg <- ggplot(data= ToothGrowth, aes(x= supp, y= len)) + geom_point()
+tg <- tg + facet_grid(. ~ dose)
+tg + geom_boxplot(aes(group= supp), color= "red") +
+    labs(title= "Fig.2: Tooth Growth by Supplement Type",
+         x = "Supplement type", y= "Tooth length") + 
+    theme(title = element_text(size=rel(.8)))
+```
+
+**Assumptions:** Since each of the six groups consists of different guinea pigs, all analyses will be done using *independent samples t-test*, by setting the parameter `paired = FALSE` (which is the default argument of the test). For the equality of variance assumption, that is whether the samples belong to populations with equal variances, I will employ a hypothesis test for the equality of variance, only for the first analysis, and assume for the rest of the analyses that groups to be compared have equal variances.
+
+### 2.1 First panel of Fig.2 (Is there a significant difference between the group on OJ and the group on VC in terms of tooth length at the dose level of $0.5$):
+
+Let's first check using the `r` function `var.test` for whether the 2 groups have equal variance.
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+lenoj05 <- filter(ToothGrowth, supp=="OJ" & dose==.5)$len # a 10-value vector of tooth length
+lenvc05 <- filter(ToothGrowth, supp=="VC" & dose==.5)$len # a 10-value vector of tooth length
+# Equality of variance test
+var.test(lenoj05, lenvc05)$p.value
+```
+
+The equality of variance test suggest that the 2 groups of guinea pigs come from populations with equal variances, since the $p.value > 0.05$ (exact $p.value=$ `r round(var.test(lenoj05, lenvc05)$p.value, 3)`). That is, we fail to reject the null hypothesis that variances are equal (or the true ratio of variances is equal to 1). Thus we set `var.equal=TRUE` below.
+
+```{r}
+t.test(x=lenoj05, y=lenvc05, var.equal = TRUE)
+```
+
+According to the `t.test`, at the dose level of $0.5$ `mg.`, the $p.value<0.05$ (exact $p.value=$ `r round(t.test(x=lenoj05, y=lenvc05, var.equal = TRUE)$p.value, 3)`), which suggests that the mean tooth length (`r mean(lenoj05)`) of guinea pigs on OJ is significantly higher than the mean tooth length (`r mean(lenvc05)`) of those on VC. Because of space issues, I won't provide the test results[^1] for the other 2 panels of Fig.2. However, when you run `t.test` for the groups in these 2 panels, one can see that while there is a significant difference in mean tooth length between the groups on OJ and VC at the dose level of $1$ `mg.`, there is no significant difference between those at the dose level of $2$ `mgs`. **As a conclusion**, we can say that guinea pigs on orange juice (OJ) tend to have higher tooth length compared to those on VC, at the dose levels of $0.5$ and $1$ `mg`.
+
+[^1]: For the code and results of the tests please refer to the Appendix.
+
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+# 2.2 Second panel of Fig.2 (Is there a significant difference between the group on OJ and 
+# the group on VC in terms of tooth length at the dose level of $1$):
+lenoj1 <- filter(ToothGrowth, supp=="OJ" & dose==1)$len # a 10-value vector of tooth length
+lenvc1 <- filter(ToothGrowth, supp=="VC" & dose==1)$len # a 10-value vector of tooth length
+t.test(x = lenoj1, y = lenvc1, var.equal = TRUE)
+```
+
+
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+# 2.3 Third panel of Fig.2 (Is there a significant difference between the group on OJ and 
+# the group on VC in terms of tooth length at the dose level of $2$):
+lenoj2 <- filter(ToothGrowth, supp=="OJ" & dose==2)$len # a 10-value vector of tooth length
+lenvc2 <- filter(ToothGrowth, supp=="VC" & dose==2)$len # a 10-value vector of tooth length
+t.test(x = lenoj2, y = lenvc2, var.equal = TRUE)
+```
+
+
+## 3. Hypothesis Test: Compare Tooth Growth by Dose Level
+
+As for the effect of supplement dose level on tooth growth, Fig.3 suggests that the higher the dose level, the higher the median tooth length for both supplement types. To statistically show that indeed these observations are correct, I ran 2 separate `t.test`s, one for the groups on OJ, and one for the groups on VC. Each one of these tests compare the groups at $0.5$ and $2$ dose levels. 
+
+```{r, echo=FALSE, fig.height=3, fig.width=5}
+library(ggplot2)
+tg <- ggplot(data= ToothGrowth, aes(x= dose, y= len)) + geom_point() +
+    scale_x_continuous(breaks = ToothGrowth$dose)
+tg <- tg + facet_grid(. ~ supp)
+tg + geom_boxplot(aes(group= dose), color= "red") +
+    labs(title= "Fig.3: Tooth Growth by Dose Level",
+         x = "Dose in milligrams", y= "Tooth length") + 
+    theme(title = element_text(size=rel(.8)))
+```
+
+According to the `t.test`[^2] for the OJ panel, there is a significant difference in mean tooth length between the group of guinea pigs receiving $0.5$ `mg.` of OJ and the group receiving $2$ `mgs.` of OJ. Similarly, for the VC panel, there is a significant difference in mean tooth length between the group receiving $0.5$ `mg.` of VC and the group receiving $2$ `mgs.` of VC. **As a conclusion**, the test results suggest that irrespective of supplement type, the higher the dose level, the higher the mean/median tooth length.
+
+[^2]: For the `t.test` results in this subsection please refer to the Appendix.
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+library(dplyr)
+lenoj05 <- filter(ToothGrowth, supp=="OJ" & dose==.5)$len # a 10-value vector of tooth length
+lenoj2 <- filter(ToothGrowth, supp=="OJ" & dose==2)$len # a 10-value vector of tooth length
+
+t.test(lenoj2, lenoj05, var.equal = TRUE)
+```
+
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+library(dplyr)
+lenvc05 <- filter(ToothGrowth, supp=="VC" & dose==.5)$len # a 10-value vector of tooth length
+lenvc2 <- filter(ToothGrowth, supp=="VC" & dose==2)$len # a 10-value vector of tooth length
+
+t.test(lenvc2, lenvc05, var.equal = TRUE)
+```
